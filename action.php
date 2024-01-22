@@ -5,6 +5,7 @@ $postData = json_decode(file_get_contents("php://input"), true);
 $matches = $postData['matches'];
 $tournamentId = intval($postData['tournament_id']);
 require_once './database.php';
+$bracket = $mysql->query("SELECT * FROM tournaments_brackets WHERE tournament_id = $tournamentId")->fetch_all(MYSQLI_ASSOC);
 $tournamentInfo = $mysql->query("SELECT * FROM tournaments WHERE tournament_id = $tournamentId")->fetch_assoc();
 $tournamentMatches = $mysql->query("SELECT * FROM calendar WHERE tournament_id = $tournamentId")->fetch_all(MYSQLI_ASSOC);
 
@@ -35,21 +36,20 @@ try {
             }
         }
 
+        if(!isset($item['team_home_id']) || !$item['team_home_id'] || $item['team_home_id'] == 'null') {
+            $teamHomeId = 0;
+        } else {
+            $teamHomeId = $item['team_home_id'];
+        }
+
+        if(!isset($item['team_away_id']) || !$item['team_away_id'] || $item['team_away_id'] == 'null') {
+            $teamAwayId = 0;
+        } else {
+            $teamAwayId = $item['team_away_id'];
+        }
+
         if(!$matchFoundedInTournament && $tournamentInfo && !$item['is_champion']) {
             $matchData = array();
-
-            if(!isset($item['team_home_id']) || !$item['team_home_id'] || $item['team_home_id'] == 'null') {
-                $teamHomeId = 0;
-            } else {
-                $teamHomeId = $item['team_home_id'];
-            }
-
-            if(!isset($item['team_away_id']) || !$item['team_away_id'] || $item['team_away_id'] == 'null') {
-                $teamAwayId = 0;
-            } else {
-                $teamAwayId = $item['team_away_id'];
-            }
-
             $matchData['league_id'] = $tournamentInfo['league_id'];
             $matchData['division_id'] = $tournamentInfo['division_id'];
             $matchData['season_id'] = $tournamentInfo['season_id'];
@@ -134,8 +134,6 @@ try {
             }
         }
 
-        # Создание сетки
-
         $item['team_home_id'] = intval($item['team_home_id']) ? (int) $item['team_home_id'] : 'null';
         $item['team_away_id'] = intval($item['team_away_id']) ? (int) $item['team_away_id'] : 'null';
         if($item['is_champion']) {
@@ -145,14 +143,23 @@ try {
         }
         
         $query = "INSERT INTO tournaments_brackets (tournament_id, tour_number, match_number, match_id, team_home_id, team_away_id, is_champion) VALUES ($tournamentId, " . intval($item['match_tour']) . ", " . intval($item['match_number']) . ", $matchId, " . intval($item['team_home_id']) . ", " . intval($item['team_away_id']) . ", " . intval($item['is_champion']) . ")";
-        
-        var_dump($query);
         $mysql->query($query);
+
+        if($matchId != 'null') {
+            $mysql->query("UPDATE calendar SET home_id = " . $teamHomeId . ", away_id = " . $teamAwayId . " WHERE match_id = $matchId");
+        }
+        
         $mysql->commit();
     }
     
     $status = true;
     $message = "Сохранено";
+
+    if($postData['confirm_delete']) {
+        foreach($bracket as $item) {
+            $mysql->query("DELETE FROM calendar WHERE match_id = " . intval($item['match_id']));
+        }
+    }
 } catch (Exception $e) {
     $mysql->rollback();
 

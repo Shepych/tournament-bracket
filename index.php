@@ -88,6 +88,7 @@
     </div>
 
     <script>
+        let bracketRepeat = true
         let clubs = JSON.parse('<?= $clubsJson ?>');
         const tournamentId = <?= $tournamentId ?>;
     </script>
@@ -95,6 +96,7 @@
 
     <?if($teamsCount > 0):?>
         <script>
+            bracketRepeat = false
             let bracket = JSON.parse('<?= $bracketJson ?>');
             tournamentBracket(<?= $teamsCount ?>, bracket)
 

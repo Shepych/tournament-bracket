@@ -264,6 +264,16 @@ function saveButton() {
       matches.push(info)
     })
 
+    confirmResult = false
+    if(bracketRepeat) {
+      let deleteMatches = confirm("Желаете так же удалить матчи ? (Если нет - то удалится только сетка, а сами матчи останутся в системе)");
+
+      // Проверяем, какой ответ выбрал пользователь
+      if (deleteMatches) {
+          confirmResult = true
+      }
+    }
+
     // Отправить fetch на php скрипт
     let url = '/action.php';
     fetch(url, {
@@ -273,7 +283,8 @@ function saveButton() {
       },
       body: JSON.stringify({
         matches: matches,
-        tournament_id: tournamentId
+        tournament_id: tournamentId,
+        confirm_delete: confirmResult
       })
     })
     .then(response => response.json())
@@ -282,6 +293,7 @@ function saveButton() {
 
   document.getElementById('app').append(button)
   
+  bracketRepeat = false
 }
 
 function deleteButton() {
@@ -289,13 +301,25 @@ function deleteButton() {
   button.innerText = "Удалить"
   button.addEventListener('click', function () {
     let deleteMatches = confirm("Желаете так же удалить матчи ? (Если нет - то удалится только сетка, а сами матчи останутся в системе)");
+    let confirmResult = false
 
     // Проверяем, какой ответ выбрал пользователь
     if (deleteMatches) {
-        alert("Пользователь выбрал 'ОК'");
-    } else {
-        alert("Пользователь выбрал 'Отмена'");
+        confirmResult = true
     }
+
+    fetch('/deleteBracket.php', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        tournament_id: tournamentId,
+        confirm_delete: confirmResult
+      })
+    })
+    .then(response => response.json())
+    .then(data => console.log(data))
   })
 
   document.getElementById('app').append(button)
@@ -305,6 +329,7 @@ const btnCreate = document.getElementById('bracket__create')
 
 btnCreate.addEventListener('click', function() {
   tournamentBracket()
+  bracketRepeat = true
 })
 
 
